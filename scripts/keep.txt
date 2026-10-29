@@ -1,0 +1,5 @@
+# Skills this fork keeps even after emilkowalski/skills deletes them.
+#
+# One skill name per line, matching a directory under skills/.
+# scripts/sync-emil-skills.sh will not delete these on upstream removal.
+# Remove a line once you're happy to let the skill go.

@@ -1,0 +1,21 @@
+{
+  "name": "aiforui",
+  "skills": [
+    "./skills/animate",
+    "./skills/animate-expo",
+    "./skills/animation-performance",
+    "./skills/animation-vocabulary",
+    "./skills/apple-design",
+    "./skills/ask-sonner",
+    "./skills/break-ui",
+    "./skills/emil-design-eng",
+    "./skills/find-animation-opportunities",
+    "./skills/improve-animations",
+    "./skills/mobile-native",
+    "./skills/pick-ui-library",
+    "./skills/prototype",
+    "./skills/remove-animations",
+    "./skills/review-animations",
+    "./skills/write-swift"
+  ]
+}

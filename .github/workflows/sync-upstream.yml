@@ -1,0 +1,82 @@
+name: Sync from emilkowalski/skills
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"  # Every Monday 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream and fetch
+        run: |
+          git remote add upstream https://github.com/emilkowalski/skills.git 2>/dev/null || true
+          git fetch upstream main
+
+      - name: Check if sync needed
+        id: check
+        run: |
+          BEHIND=$(git rev-list --count HEAD..upstream/main)
+          echo "behind=$BEHIND" >> "$GITHUB_OUTPUT"
+          if [ "$BEHIND" -eq 0 ]; then
+            echo "Fork is already up to date with upstream."
+          else
+            echo "Fork is $BEHIND commit(s) behind upstream."
+          fi
+
+      - name: Merge upstream
+        if: steps.check.outputs.behind != '0'
+        run: |
+          set -euo pipefail
+          if git merge upstream/main --no-edit; then
+            echo "Merge successful."
+          else
+            echo "Upstream touched paths this fork also edits; keeping the fork side."
+            echo "scripts/sync-emil-skills.sh rebuilds skills/ from upstream next, so"
+            echo "this only affects root docs and the workflow itself."
+            while IFS= read -r conflict_path; do
+              [ -n "$conflict_path" ] || continue
+              git checkout --ours -- "$conflict_path" 2>/dev/null || git rm -f -- "$conflict_path" 2>/dev/null || true
+            done < <(git diff --name-only --diff-filter=U)
+            git add -A
+            git commit -m "Merge upstream keeping fork-managed paths"
+          fi
+
+      - name: Rebuild skill tree
+        if: steps.check.outputs.behind != '0'
+        run: |
+          bash scripts/sync-emil-skills.sh
+          git add -A
+          git commit -m "Sync skills from upstream" || true
+
+      - name: Push changes
+        if: steps.check.outputs.behind != '0'
+        run: git push origin main
+
+      - name: Report status
+        if: failure()
+        run: |
+          echo ""
+          echo "═══════════════════════════════════════════"
+          echo "  SYNC FAILED — action required"
+          echo "═══════════════════════════════════════════"
+          echo ""
+          echo "Common causes:"
+          echo "  - Upstream restructured skills/ (no longer skills/<name>/)"
+          echo "  - scripts/sync-emil-skills.sh lost executable bit or paths moved"
+          echo ""
+          echo "Skills kept on purpose (scripts/keep.txt):"
+          cat scripts/keep.txt | grep -v '^#' | grep -v '^$' || echo "  none"
